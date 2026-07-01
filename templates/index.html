@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>花间集 · 鲜花预定配送</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 375px;
+      height: 812px;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    @media (max-width: 420px) {
+      body { padding: 0; }
+      .app-container { max-width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    }
+    .page { display: none; flex-direction: column; height: 100%; overflow-y: auto; background: #fff; }
+    .page.active { display: flex; }
+    .page-content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 70px; }
+    .bottom-nav {
+      display: flex; justify-content: space-around; align-items: center;
+      background: #fff; border-top: 1px solid #f0f0f0;
+      padding: 10px 0 20px; position: absolute; bottom: 0; width: 100%; height: 60px; z-index: 10;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #999; gap: 4px; cursor: pointer; }
+    .nav-item.active { color: #FF8FB1; font-weight: 600; }
+    .nav-icon { font-size: 20px; }
+    .btn {
+      background: #FF8FB1; color: #fff; border: none; border-radius: 24px; padding: 14px 24px;
+      font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s;
+      width: 100%; display: block; box-shadow: 0 4px 12px rgba(255,143,177,0.3);
+    }
+    .btn:active { opacity: 0.85; transform: scale(0.98); }
+    .btn-outline { background: #fff; color: #FF8FB1; border: 1px solid #FF8FB1; box-shadow: none; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .input-field { width: 100%; padding: 12px 16px; border: 1px solid #eee; border-radius: 10px; font-size: 15px; margin-bottom: 12px; background: #fafafa; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; }
+    .tab { padding: 8px 16px; background: #f5f5f5; border-radius: 20px; font-size: 14px; color: #666; cursor: pointer; flex-shrink: 0; }
+    .tab.active { background: #FF8FB1; color: #fff; font-weight: 600; }
+    .price-original { text-decoration: line-through; color: #999; font-size: 13px; margin-left: 8px; }
+    .price-hike { color: #FF8FB1; font-size: 12px; background: #FFF0F5; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+    .progress-bar { height: 6px; background: #eee; border-radius: 3px; margin: 8px 0; }
+    .progress-fill { height: 100%; background: #FF8FB1; border-radius: 3px; }
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content { background: #fff; border-radius: 16px; padding: 24px; width: 85%; max-width: 340px; position: relative; }
+    .close-btn { position: absolute; right: 16px; top: 16px; font-size: 24px; color: #999; cursor: pointer; }
+    .red-warning { color: #e74c3c; font-size: 13px; animation: breathe 1.5s infinite; }
+    @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .goods-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .goods-card { width: calc(50% - 6px); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; }
+    .goods-card img { width: 100%; height: 120px; object-fit: cover; background: #fce4ec; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+  </style>
+</head>
+<body>
+<div class="app-container" id="app">
+  <!-- ========== 登录页 ========== -->
+  <div class="page active" id="login-page">
+    <div style="padding:40px 24px; height:100%; display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-size:32px; margin-bottom:24px; text-align:center;">🌸 花间集</div>
+      <div class="tabs" style="justify-content:center; margin-bottom:32px;">
+        <div class="tab active" data-role="consumer" onclick="selectRole('consumer', this)">🎀 消费者</div>
+        <div class="tab" data-role="owner" onclick="selectRole('owner', this)">🌿 店主</div>
+        <div class="tab" data-role="rider" onclick="selectRole('rider', this)">🛵 骑手</div>
+      </div>
+      <input class="input-field" type="tel" placeholder="手机号" id="phoneInput">
+      <div style="display:flex; gap:8px;">
+        <input class="input-field" type="text" placeholder="验证码" style="flex:2;" id="codeInput">
+        <button class="btn" style="flex:1; padding:12px; font-size:14px;" onclick="getCode()">获取验证码</button>
+      </div>
+      <button class="btn" style="margin-top:24px;" onclick="login()">登录</button>
+    </div>
+  </div>
+
+  <!-- ========== 消费者首页 ========== -->
+  <div class="page" id="consumer-home">
+    <div class="page-content">
+      <input class="input-field" type="search" placeholder="搜索鲜花、礼盒..." style="margin-bottom:12px;">
+      <div style="background:#FFE4EC; border-radius:12px; padding:16px; margin-bottom:16px; text-align:center;">🌸 七夕限定 · 玫瑰物语 现已上架</div>
+      <!-- 场景Tab -->
+      <div class="tabs" id="sceneTabs">
+        <div class="tab active" onclick="filterScene('all', this)">全部</div>
+        <div class="tab" onclick="filterScene('love', this)">送女友</div>
+        <div class="tab" onclick="filterScene('birthday', this)">生日</div>
+        <div class="tab" onclick="filterScene('visit', this)">探病</div>
+      </div>
+      <!-- 品类Tab -->
+      <div class="tabs" id="categoryTabs">
+        <div class="tab active" onclick="filterCategory('all', this)">全部</div>
+        <div class="tab" onclick="filterCategory('bouquet', this)">花束</div>
+        <div class="tab" onclick="filterCategory('box', this)">礼盒</div>
+        <div class="tab" onclick="filterCategory('basket', this)">花篮</div>
+        <div class="tab" onclick="filterCategory('preserved', this)">永生花</div>
+        <div class="tab" onclick="filterCategory('single', this)">单枝</div>
+        <div class="tab" onclick="filterCategory('plant', this)">绿植</div>
+        <div class="tab" onclick="filterCategory('fruit', this)">水果花束</div>
+        <div class="tab" onclick="filterCategory('toy', this)">玩偶花束</div>
+      </div>
+      <div id="goodsList" class="goods-grid"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="switchPage('consumer-home')"><span class="nav-icon">🏠</span>首页</div>
+      <div class="nav-item" onclick="switchPage('consumer-orders')"><span class="nav-icon">📋</span>订单</div>
+      <div class="nav-item" onclick="switchPage('consumer-profile')"><span class="nav-icon">👤</span>我的</div>
+    </div>
+  </div>
+
+  <!-- ========== 商品详情 ========== -->
+  <div class="page" id="goods-detail">
+    <div class="page-content" id="detailContent"></div>
+    <div style="padding:16px; border-top:1px solid #eee;"><button class="btn" onclick="addToOrder()">立即预定</button></div>
+  </div>
+
+  <!-- ========== 下单结算 ========== -->
+  <div class="page" id="checkout-page">
+    <div class="page-content" id="checkoutContent"></div>
+  </div>
+
+  <!-- ========== 消费者订单列表 ========== -->
+  <div class="page" id="consumer-orders">
+    <div class="page-content">
+      <div class="tabs" id="orderTabs">
+        <div class="tab active" onclick="filterOrders('all', this)">全部</div>
+        <div class="tab" onclick="filterOrders('pending', this)">待接单</div>
+        <div class="tab" onclick="filterOrders('delivering', this)">配送中</div>
+        <div class="tab" onclick="filterOrders('done', this)">已完成</div>
+      </div>
+      <div id="orderList"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="switchPage('consumer-home')"><span class="nav-icon">🏠</span>首页</div>
+      <div class="nav-item active" onclick="switchPage('consumer-orders')"><span class="nav-icon">📋</span>订单</div>
+      <div class="nav-item" onclick="switchPage('consumer-profile')"><span class="nav-icon">👤</span>我的</div>
+    </div>
+  </div>
+
+  <!-- ========== 配送追踪 ========== -->
+  <div class="page" id="tracking-page">
+    <div class="page-content" id="trackingContent"></div>
+  </div>
+
+  <!-- ========== 店主：订单总览 ========== -->
+  <div class="page" id="owner-orders">
+    <div class="page-content">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <select class="input-field" style="margin-bottom:0;" onchange="filterOwnerOrders()"><option value="all">全部节日</option><option>情人节</option><option>七夕</option></select>
+      </div>
+      <div class="tabs" id="ownerOrderTabs">
+        <div class="tab active" onclick="filterOwnerStatus('pending', this)">待接单</div>
+        <div class="tab" onclick="filterOwnerStatus('delivering', this)">待配送</div>
+        <div class="tab" onclick="filterOwnerStatus('done', this)">已完成</div>
+      </div>
+      <div id="ownerOrderList"></div>
+      <div id="batchActions" style="display:none; background:#fff; padding:12px; border-radius:12px; box-shadow:0 -2px 10px rgba(0,0,0,0.05); position:sticky; bottom:16px;">
+        <button class="btn" onclick="openAssignModal()">分配骑手</button>
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="cancelOwnerOrders()">取消订单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 店主：商品管理 ========== -->
+  <div class="page" id="owner-goods">
+    <div class="page-content">
+      <select class="input-field" onchange="filterOwnerGoods()"><option value="all">全部分类</option><option>花束</option><option>礼盒</option><option>永生花</option></select>
+      <div id="ownerGoodsList"></div>
+      <button class="btn" style="margin-top:12px;" onclick="alert('新增商品功能演示')">+ 新增商品</button>
+    </div>
+  </div>
+
+  <!-- ========== 店主：销量统计 ========== -->
+  <div class="page" id="owner-stats">
+    <div class="page-content">
+      <select class="input-field"><option>近7天</option><option>近30天</option></select>
+      <div class="card" style="height:150px; display:flex; align-items:flex-end; gap:8px; padding:16px;">
+        <div style="width:20%; height:80%; background:#FF8FB1; border-radius:4px;"></div>
+        <div style="width:20%; height:60%; background:#FF8FB1;"></div>
+        <div style="width:20%; height:90%; background:#FF8FB1;"></div>
+        <div style="width:20%; height:40%; background:#FF8FB1;"></div>
+        <div style="width:20%; height:70%; background:#FF8FB1;"></div>
+      </div>
+      <div class="card" style="display:flex; justify-content:space-around; margin-top:12px;">
+        <div>🌸 花束 45%</div><div>🎁 礼盒 30%</div><div>🌿 绿植 15%</div>
+      </div>
+      <button class="btn btn-outline" style="margin-top:12px;" onclick="alert('导出报表')">导出报表</button>
+    </div>
+  </div>
+
+  <!-- ========== 骑手订单列表 ========== -->
+  <div class="page" id="rider-orders">
+    <div class="page-content" id="riderOrderList"></div>
+  </div>
+
+  <!-- ========== 骑手订单详情 ========== -->
+  <div class="page" id="rider-detail">
+    <div class="page-content" id="riderDetailContent"></div>
+    <div style="padding:16px; border-top:1px solid #eee; display:flex; gap:8px;">
+      <button class="btn" onclick="riderAction('pickup')">取花出发</button>
+      <button class="btn" onclick="riderAction('delivered')">已送达</button>
+      <button class="btn btn-outline" onclick="openExceptionModal()">上报异常</button>
+    </div>
+  </div>
+
+  <!-- 弹窗：分配骑手 -->
+  <div class="modal" id="assignModal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('assignModal')">&times;</span>
+      <h3>选择骑手</h3>
+      <div id="riderSelectList"></div>
+      <button class="btn" style="margin-top:16px;" onclick="confirmAssign()">确认分配</button>
+    </div>
+  </div>
+
+  <!-- 弹窗：异常上报 -->
+  <div class="modal" id="exceptionModal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('exceptionModal')">&times;</span>
+      <h3>上报异常</h3>
+      <select class="input-field"><option>地址错误</option><option>拒收</option><option>鲜花破损</option></select>
+      <textarea class="input-field" placeholder="备注"></textarea>
+      <button class="btn" onclick="submitException()">提交</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== 全局状态 ==========
+  let currentRole = 'consumer';
+  let selectedGoods = null;
+  let consumerOrders = [];
+  let ownerOrders = [
+    { id:'o1', goods:'经典红玫瑰花束', price:299, status:'pending', address:'阳光花园3-502', slot:'早9-12' },
+    { id:'o2', goods:'零食礼盒', price:199, status:'delivering', address:'科技园B座', slot:'午14-17', rider:'张骑手' }
+  ];
+  let riderTasks = [];
+  let selectedOwnerIds = new Set();
+
+  // 商品数据（10+品类）
+  const goodsDB = [
+    { id:1, name:'经典红玫瑰花束', price:299, hike:20, img:'🌹', cat:'bouquet', scene:'love', stock:15, sold:1200 },
+    { id:2, name:'韩式小清新花束', price:259, hike:15, img:'💐', cat:'bouquet', scene:'birthday', stock:10, sold:890 },
+    { id:3, name:'巨型玫瑰熊', price:599, hike:50, img:'🧸', cat:'bouquet', scene:'love', stock:3, sold:450 },
+    { id:4, name:'永生花玻璃罩', price:399, hike:0, img:'🔮', cat:'preserved', scene:'love', stock:8, sold:670 },
+    { id:5, name:'零食鲜花礼盒', price:199, hike:10, img:'🎁', cat:'box', scene:'birthday', stock:12, sold:560 },
+    { id:6, name:'开业花篮', price:499, hike:0, img:'🧺', cat:'basket', scene:'all', stock:5, sold:230 },
+    { id:7, name:'单枝郁金香', price:39, hike:0, img:'🌷', cat:'single', scene:'visit', stock:30, sold:980 },
+    { id:8, name:'多肉盆栽', price:89, hike:0, img:'🪴', cat:'plant', scene:'all', stock:20, sold:340 },
+    { id:9, name:'草莓花束', price:268, hike:20, img:'🍓', cat:'fruit', scene:'love', stock:7, sold:520 },
+    { id:10, name:'公仔花束', price:328, hike:10, img:'🧸🌹', cat:'toy', scene:'birthday', stock:9, sold:310 },
+  ];
+
+  function renderGoodsList(scene='all', cat='all') {
+    const filtered = goodsDB.filter(g => (scene==='all' || g.scene===scene) && (cat==='all' || g.cat===cat));
+    document.getElementById('goodsList').innerHTML = filtered.map(g => `
+      <div class="goods-card" onclick="openDetail(${g.id})">
+        <div style="font-size:48px; text-align:center; padding:16px;">${g.img}</div>
+        <div style="padding:8px;">
+          <div style="font-weight:600;">${g.name}</div>
+          <div>¥${g.price} <span class="price-original">¥${g.price+30}</span> ${g.hike>0?`<span class="price-hike">+¥${g.hike}</span>`:''}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${g.stock/30*100}%; background:${g.stock<=10?'#e74c3c':'#FF8FB1'};"></div></div>
+          <div style="font-size:12px; color:#999;">🔥已售${g.sold}+ | 库存${g.stock}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openDetail(id) {
+    selectedGoods = goodsDB.find(g => g.id === id);
+    document.getElementById('detailContent').innerHTML = `
+      <div style="font-size:80px; text-align:center;">${selectedGoods.img}</div>
+      <h2>${selectedGoods.name}</h2>
+      <p style="color:#666;">花语：爱与美好，全城2小时达</p>
+      <div style="margin:12px 0;">规格：
+        <select class="input-field" id="sizeSelect">
+          <option>小 ¥${selectedGoods.price}</option>
+          <option>中 ¥${selectedGoods.price+50}</option>
+          <option>大 ¥${selectedGoods.price+100}</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">数量：
+        <button onclick="changeQty(-1)">-</button><span id="qty">1</span><button onclick="changeQty(1)">+</button>
+      </div>
+    `;
+    switchPage('goods-detail');
+  }
+
+  function changeQty(d) { let e = document.getElementById('qty'); let v = parseInt(e.innerText)+d; if(v>=1) e.innerText=v; }
+
+  function addToOrder() {
+    let qty = parseInt(document.getElementById('qty').innerText);
+    let priceBase = selectedGoods.price;
+    switchPage('checkout-page');
+    document.getElementById('checkoutContent').innerHTML = `
+      <div class="card" onclick="alert('地址管理')">📍 阳光花园3-502 李女士 138xxxx</div>
+      <input class="input-field" type="date" value="2026-07-02">
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <div class="tab active" onclick="selectSlot(this)">早9-12</div>
+        <div class="tab" onclick="selectSlot(this)">午14-17</div>
+        <div class="tab" onclick="selectSlot(this)">晚18-21</div>
+      </div>
+      <textarea class="input-field" placeholder="贺卡留言"></textarea>
+      <div class="card">${selectedGoods.name} x${qty} 合计 ¥${priceBase*qty}</div>
+      <button class="btn" onclick="submitOrder()">提交订单</button>
+    `;
+  }
+
+  function selectSlot(el) { el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); }
+
+  function submitOrder() {
+    let newOrder = { id:Date.now().toString(), goods:selectedGoods.name, price:selectedGoods.price, status:'pending', slot:'早9-12', address:'阳光花园', progress:0 };
+    consumerOrders.push(newOrder);
+    ownerOrders.push({...newOrder, id:'o'+Date.now(), status:'pending'});
+    alert('支付成功！');
+    switchPage('consumer-orders');
+    renderOrderList();
+  }
+
+  function renderOrderList(filter='all') {
+    let list = document.getElementById('orderList');
+    let filtered = consumerOrders.filter(o=> filter==='all' || o.status===filter);
+    list.innerHTML = filtered.map(o=>`
+      <div class="card" onclick="openTracking('${o.id}')">
+        <b>${o.goods}</b> <span style="float:right;">¥${o.price}</span>
+        <div style="font-size:13px; color:#666;">${o.address} | ${o.slot}</div>
+        <div style="color:#FF8FB1;">${o.status==='pending'?'待接单':o.status==='delivering'?'配送中':'已完成'}</div>
+      </div>
+    `).join('');
+  }
+
+  function openTracking(id) {
+    let o = consumerOrders.find(x=>x.id===id);
+    switchPage('tracking-page');
+    document.getElementById('trackingContent').innerHTML = `
+      <div class="card"><b>${o.goods}</b> ¥${o.price}</div>
+      <div>收花人：李女士 | ${o.address}</div>
+      <div style="margin:16px 0;">配送进度</div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="${o.progress>=0?'active':''}">待接单</span>
+        <span class="${o.progress>=1?'active':''}">待配送</span>
+        <span class="${o.progress>=2?'active':''}">配送中</span>
+        <span class="${o.progress>=3?'active':''}">已送达</span>
+      </div>
+      ${o.overTime?'<div class="red-warning">已超时，为您催促骑手</div>':''}
+    `;
+  }
+
+  // 店主逻辑
+  function renderOwnerOrders(status='pending') {
+    let list = document.getElementById('ownerOrderList');
+    let filtered = ownerOrders.filter(o=> status==='all' || o.status===status);
+    list.innerHTML = filtered.map(o=>`
+      <div class="card" style="display:flex; align-items:center;">
+        <input type="checkbox" onchange="toggleOwnerSelect('${o.id}')" ${selectedOwnerIds.has(o.id)?'checked':''}>
+        <div style="flex:1; margin-left:8px;"><b>${o.goods}</b><br>${o.address} | ${o.slot}</div>
+        <div>${o.status==='pending'?'待接单':o.status==='delivering'?'配送中':'已完成'}</div>
+      </div>
+    `).join('');
+    document.getElementById('batchActions').style.display = selectedOwnerIds.size>0?'block':'none';
+  }
+
+  function toggleOwnerSelect(id) { selectedOwnerIds.has(id)? selectedOwnerIds.delete(id): selectedOwnerIds.add(id); renderOwnerOrders(); }
+
+  function openAssignModal() {
+    document.getElementById('assignModal').classList.add('active');
+    document.getElementById('riderSelectList').innerHTML = ['张骑手(空闲)','王骑手(忙碌)'].map(r=>`<div class="card" onclick="selectRider('${r}')">${r}</div>`).join('');
+  }
+
+  function confirmAssign() {
+    selectedOwnerIds.forEach(id=>{ let o = ownerOrders.find(x=>x.id===id); if(o) o.status='delivering'; });
+    closeModal('assignModal'); renderOwnerOrders('pending');
+  }
+
+  // 骑手逻辑
+  function renderRiderOrders() {
+    let list = document.getElementById('riderOrderList');
+    list.innerHTML = riderTasks.map(t=>`
+      <div class="card" onclick="openRiderDetail('${t.id}')"><b>${t.goods}</b><br>${t.address} | ${t.receiver} | ${t.slot}</div>
+    `).join('');
+  }
+
+  function openRiderDetail(id) {
+    let t = riderTasks.find(x=>x.id===id);
+    switchPage('rider-detail');
+    document.getElementById('riderDetailContent').innerHTML = `<h3>${t.goods}</h3><p>${t.address}</p><p>收花人：${t.receiver}</p>`;
+  }
+
+  function riderAction(type) {
+    if(type==='pickup') alert('状态更新：配送中');
+    else if(type==='delivered') alert('已送达');
+  }
+
+  function openExceptionModal() { document.getElementById('exceptionModal').classList.add('active'); }
+  function submitException() { alert('异常已上报'); closeModal('exceptionModal'); }
+
+  // 页面切换
+  function switchPage(id) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id==='consumer-home') renderGoodsList();
+    if(id==='consumer-orders') renderOrderList();
+    if(id==='owner-orders') renderOwnerOrders('pending');
+    if(id==='rider-orders') renderRiderOrders();
+  }
+
+  function selectRole(role, el) {
+    currentRole = role;
+    document.querySelectorAll('#login-page .tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function login() {
+    if(currentRole==='consumer') switchPage('consumer-home');
+    else if(currentRole==='owner') switchPage('owner-orders');
+    else if(currentRole==='rider') switchPage('rider-orders');
+  }
+
+  function getCode(){ alert('验证码已发送'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+  function filterScene(scene, el){ document.querySelectorAll('#sceneTabs .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderGoodsList(scene, document.querySelector('#categoryTabs .tab.active')?.dataset.cat||'all'); }
+  function filterCategory(cat, el){ document.querySelectorAll('#categoryTabs .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); el.dataset.cat=cat; renderGoodsList(document.querySelector('#sceneTabs .tab.active')?.dataset.scene||'all', cat); }
+  function filterOrders(status, el){ document.querySelectorAll('#orderTabs .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderOrderList(status); }
+  function filterOwnerStatus(status, el){ document.querySelectorAll('#ownerOrderTabs .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderOwnerOrders(status); }
+  function filterOwnerOrders(){ renderOwnerOrders('pending'); }
+  function cancelOwnerOrders(){ selectedOwnerIds.clear(); renderOwnerOrders('pending'); }
+
+  // 初始化
+  renderGoodsList();
+</script>
+</body>
+</html>

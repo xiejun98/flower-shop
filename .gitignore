@@ -1,0 +1,14 @@
+<<<<<<< HEAD
+__pycache__/
+*.pyc
+*.db
+.venv/
+*.log
+=======
+__pycache__/
+*.pyc
+*.db
+.venv/
+*.log
+>>>>>>> 20dc931aa27b512bcbc59fb592419db57e8f68bb
+.vscode/
